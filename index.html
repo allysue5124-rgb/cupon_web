@@ -6,17 +6,17 @@
   <title>兌換券</title>
   <style>
     :root{
-      --bg: #f6f7f9;
-      --card: #ffffff;
-      --text: #1f2937;
-      --muted: #6b7280;
-      --border: #e5e7eb;
-      --shadow: 0 10px 30px rgba(17,24,39,0.08);
-      --shadow2: 0 6px 18px rgba(17,24,39,0.10);
-      --accent: #334155;
-      --accent2:#64748b;
-      --danger:#b42318;
-      --ok:#0f766e;
+      --bg: #775b5f;
+      --card: hsl(223, 100%, 97%);
+      --text: #47040f;
+      --muted: #1c222e;
+      --border: #ce9a9a;
+      --shadow: 0 10px 30px rgba(100, 36, 50, 0.534);
+      --shadow2: 0 6px 18px rgba(75, 23, 38, 0.384);
+      --accent: #6e2843b7;
+      --accent2:#e05959ea;
+      --danger:#6d1c16;
+      --ok:#10504b;
     }
     *{ box-sizing:border-box; }
     body{
@@ -31,7 +31,7 @@
       display:flex; align-items:flex-end; justify-content:space-between; gap:14px;
       margin-bottom: 14px;
     }
-    h1{ font-size: 22px; margin:0; letter-spacing: .2px; }
+    h1{ font-size: 50px; margin:0; letter-spacing: .2px; }
     .sub{ color:var(--muted); font-size: 13px; margin-top:6px; }
 
     .panel{
@@ -119,7 +119,7 @@
       min-height: 128px;
     }
     .card:hover{ transform: translateY(-2px); box-shadow: var(--shadow2); }
-    .title{ font-weight: 850; letter-spacing: .2px; }
+    .title{ font-weight: 1000; letter-spacing: .2px; }
     .meta{ margin-top: 8px; color: var(--muted); font-size: 13px; }
     .remain{
       margin-top: 10px;
@@ -226,7 +226,6 @@
     <div class="header">
       <div>
         <h1>兌換券</h1>
-        <div class="sub">滑鼠移到卡片上可查看說明並兌換。兌換後會更新次數並通知你。</div>
       </div>
       <div class="pill" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">尚未載入</span></div>
     </div>
@@ -240,17 +239,13 @@
         <button class="btn" id="load">重新載入</button>
       </div>
       <div class="row">
-        <div class="hint">
-          讀取券資料（public）不一定需要 Token；但「兌換扣次數」需要 <code class="inline">Contents: Read and write</code> 權限的 Token。
-        </div>
+        
       </div>
     </div>
 
     <div id="grid" class="grid"></div>
 
-    <div class="footerNote">
-      小提醒：若你剛更新檔案但網頁沒變，請用無痕視窗或按 <b>Ctrl+F5</b> 硬重新整理。
-    </div>
+  
   </div>
 
   <!-- modal -->
@@ -428,15 +423,14 @@ function renderCoupons(){
 
     card.innerHTML = `
       <div class="title">${escapeHtml(c.title ?? `兌換券 ${idx+1}`)}</div>
-      <div class="meta">${escapeHtml(c.id ?? `C${idx+1}`)}</div>
       <div class="remain">
         <span>剩餘兌換次數</span>
         <span class="badge ${disabled ? "zero" : ""}">${remain}</span>
       </div>
 
       <div class="hoverBox">
+        <br>
         <div class="desc">${escapeHtml(c.desc ?? "")}</div>
-        <div class="small">代號：${escapeHtml(c.id ?? `C${idx+1}`)}</div>
         <div class="actions">
           <button class="redeemBtn" ${disabled ? "disabled" : ""} data-idx="${idx}">
             ${disabled ? "已用完" : "兌換"}
@@ -461,7 +455,7 @@ function openConfirm(idx){
     <p><b>${escapeHtml(c.title)}</b></p>
     <p>確定要兌換 <b>1 次</b> 嗎？</p>
     <p>目前剩餘：<b>${escapeHtml(String(c.remain))}</b></p>
-    <p class="hint">確定後會扣除次數、更新到 GitHub，並透過 Discord 通知你。</p>
+    <p class="hint">確定後會扣除次數，並通知貓貓。</p>
   `;
   modalBg.style.display = "flex";
 }
@@ -479,7 +473,7 @@ document.getElementById("okBtn").onclick = async () => {
 
   const token = getToken();
   if (!token){
-    showToast("兌換需要 GitHub Token（Contents: Read and write）");
+    showToast("兌換需要 GitHub Token");
     return;
   }
 
@@ -502,7 +496,7 @@ document.getElementById("okBtn").onclick = async () => {
     c.remain = Number(c.remain) + 1;
     renderCoupons();
     console.error(e);
-    showToast("更新失敗：請檢查 Token 權限/是否選到 repo");
+    showToast("更新失敗：請檢查 Token 是否正確");
   }
 };
 
