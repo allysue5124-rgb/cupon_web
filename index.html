@@ -544,7 +544,7 @@ async function notifyDiscord(c){
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        content: `兌換通知：${c.title}（${c.id}）被兌換 1 次，剩餘 ${c.remain}。`
+        content: `兌換通知： "${c.title}" 被兌換 1 次，剩餘 ${c.remain}。`
       })
     });
   }catch{}
