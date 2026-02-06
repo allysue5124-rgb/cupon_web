@@ -13,10 +13,10 @@
       --border: #e5e7eb;
       --shadow: 0 10px 30px rgba(17,24,39,0.08);
       --shadow2: 0 6px 18px rgba(17,24,39,0.10);
-      --accent: #334155;      /* 低飽和藍灰 */
-      --accent2:#64748b;      /* 次要藍灰 */
+      --accent: #334155;
+      --accent2:#64748b;
       --danger:#b42318;
-      --ok:#0f766e;           /* 低飽和綠 */
+      --ok:#0f766e;
     }
     *{ box-sizing:border-box; }
     body{
@@ -24,7 +24,7 @@
       background: radial-gradient(1200px 600px at 15% 0%, #eef2f6 0%, var(--bg) 45%, #f3f4f6 100%);
       color:var(--text);
       font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans TC", Arial, sans-serif;
-      line-height:1.4;
+      line-height:1.45;
     }
     .wrap{ max-width: 1100px; margin: 28px auto; padding: 0 16px; }
     .header{
@@ -43,6 +43,7 @@
     }
     .row{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
     .row + .row{ margin-top:10px; }
+
     .input{
       flex: 1 1 360px;
       display:flex; gap:10px; align-items:center;
@@ -69,6 +70,7 @@
       font-weight: 700;
       font-size: 13px;
       transition: transform .06s ease, box-shadow .2s ease, background .2s ease;
+      user-select:none;
     }
     .btn:hover{ box-shadow: var(--shadow2); background:#fbfbfc; }
     .btn:active{ transform: translateY(1px); }
@@ -78,6 +80,8 @@
       color:#fff;
     }
     .btn.primary:hover{ background: #2b3a4d; }
+    .btn:disabled{ opacity:.55; cursor:not-allowed; }
+
     .pill{
       display:inline-flex; align-items:center; gap:8px;
       padding: 8px 10px;
@@ -88,12 +92,14 @@
       font-size: 12px;
       white-space:nowrap;
     }
-    .dot{
-      width:8px; height:8px; border-radius: 999px; background: #cbd5e1;
-    }
+    .dot{ width:8px; height:8px; border-radius: 999px; background: #cbd5e1; }
     .dot.ok{ background: #5eead4; }
     .dot.bad{ background: #fca5a5; }
+
     .hint{ color:var(--muted); font-size: 12px; }
+    .danger{ color: var(--danger); font-weight: 800; }
+    .ok{ color: var(--ok); font-weight: 800; }
+    code.inline{ background:#eef2f7; padding:2px 6px; border-radius: 8px; border:1px solid #e6eaf0; }
 
     .grid{
       margin-top: 16px;
@@ -113,7 +119,7 @@
       min-height: 128px;
     }
     .card:hover{ transform: translateY(-2px); box-shadow: var(--shadow2); }
-    .title{ font-weight: 800; letter-spacing: .2px; }
+    .title{ font-weight: 850; letter-spacing: .2px; }
     .meta{ margin-top: 8px; color: var(--muted); font-size: 13px; }
     .remain{
       margin-top: 10px;
@@ -130,11 +136,12 @@
       border:1px solid var(--border);
       background:#fbfbfc;
       color: var(--accent2);
-      font-weight: 800;
+      font-weight: 850;
+      min-width: 42px;
+      justify-content:center;
     }
     .badge.zero{ color: #9ca3af; }
 
-    /* hover panel */
     .hoverBox{
       position:absolute;
       left:12px; right:12px; bottom:12px;
@@ -156,6 +163,7 @@
     .desc{ color: var(--text); font-size: 13px; }
     .small{ color: var(--muted); font-size: 12px; margin-top: 6px; }
     .actions{ margin-top: 10px; display:flex; gap:10px; }
+
     .redeemBtn{
       border:1px solid var(--accent);
       background: transparent;
@@ -163,7 +171,7 @@
       padding: 9px 12px;
       border-radius: 12px;
       cursor:pointer;
-      font-weight: 800;
+      font-weight: 850;
       font-size: 13px;
     }
     .redeemBtn:hover{ background:#f3f4f6; }
@@ -174,10 +182,6 @@
       background: #f9fafb;
     }
 
-    .danger{ color: var(--danger); font-weight: 800; }
-    .ok{ color: var(--ok); font-weight: 800; }
-
-    /* modal */
     .modalBg{
       display:none;
       position:fixed; inset:0;
@@ -198,7 +202,6 @@
     .modal p{ margin: 6px 0; color: var(--muted); font-size: 13px; }
     .modalBtns{ display:flex; justify-content:flex-end; gap:10px; margin-top: 14px; }
 
-    /* toast */
     .toast{
       position: fixed;
       right: 16px;
@@ -212,9 +215,9 @@
       display:none;
       max-width: min(420px, calc(100vw - 32px));
       font-size: 13px;
+      white-space: pre-wrap;
     }
     .footerNote{ margin-top: 14px; color: var(--muted); font-size: 12px; }
-    code.inline{ background:#eef2f7; padding:2px 6px; border-radius: 8px; border:1px solid #e6eaf0; }
   </style>
 </head>
 
@@ -230,7 +233,7 @@
 
     <div class="panel">
       <div class="row">
-        <div class="input" title="Private repo 需要 Token 才能讀寫">
+        <div class="input" title="兌換（寫入 GitHub 檔案）需要 Token">
           <input id="token" type="password" placeholder="貼上 GitHub Token（只需一次，會存在此瀏覽器）" />
         </div>
         <button class="btn primary" id="saveToken">儲存 Token</button>
@@ -238,7 +241,7 @@
       </div>
       <div class="row">
         <div class="hint">
-          建議：只給朋友用就私下傳 Token；這個 Token 只要有 <code class="inline">Contents: Read and write</code> 權限即可。
+          讀取券資料（public）不一定需要 Token；但「兌換扣次數」需要 <code class="inline">Contents: Read and write</code> 權限的 Token。
         </div>
       </div>
     </div>
@@ -246,14 +249,14 @@
     <div id="grid" class="grid"></div>
 
     <div class="footerNote">
-      若你看到「讀取失敗 404」，通常是 <b>Private repo 沒有帶 Token</b>（本頁已支援：只要儲存 Token 再重新載入即可）。
+      小提醒：若你剛更新檔案但網頁沒變，請用無痕視窗或按 <b>Ctrl+F5</b> 硬重新整理。
     </div>
   </div>
 
   <!-- modal -->
   <div id="modalBg" class="modalBg" role="dialog" aria-modal="true" aria-label="確認兌換">
     <div class="modal">
-      <h2 id="modalTitle">確認兌換</h2>
+      <h2>確認兌換</h2>
       <div id="modalBody"></div>
       <div class="modalBtns">
         <button class="btn" id="cancelBtn">取消</button>
@@ -265,13 +268,13 @@
   <div id="toast" class="toast"></div>
 
 <script>
-/** ====== 必改：你的 repo 設定 ====== */
+/** ====== 你的 repo 設定（已依你專案填好） ====== */
 const OWNER  = "allysue5124-rgb";
 const REPO   = "cupon_web";
 const BRANCH = "main";
 const PATH   = "coupons.json";
 
-/** ====== 通知：Discord Webhook（你已提供） ====== */
+/** ====== Discord Webhook（你已提供） ====== */
 const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1469263538064199792/qlJoiqx0tnDDlLESdhAAUG_cbW_8dw2h81zSM_FqA-36q0nT_XCCBbdPVtERjwDc6GOt";
 
 /** ====== DOM ====== */
@@ -298,7 +301,7 @@ function setStatus(text, kind="idle"){
 function showToast(msg){
   toast.textContent = msg;
   toast.style.display = "block";
-  setTimeout(() => toast.style.display = "none", 2600);
+  setTimeout(() => toast.style.display = "none", 3200);
 }
 
 function escapeHtml(s){
@@ -326,30 +329,40 @@ async function githubFetch(url, {method="GET", token="", body=null} = {}){
   if (token) headers["Authorization"] = `Bearer ${token}`;
   if (body) headers["Content-Type"] = "application/json";
 
-  const res = await fetch(url, {
+  return fetch(url, {
     method,
     headers,
     body: body ? JSON.stringify(body) : null
   });
-
-  return res;
 }
 
-/** ✅ 修正點：Private repo 讀取也要帶 token */
+/** ✅ 讀取策略：先讀同站 ./coupons.json（最穩，中文不亂碼）；失敗才用 Contents API */
 async function loadCoupons(){
   setStatus("載入中…");
   grid.innerHTML = "載入中…";
 
+  // 1) 先用 GitHub Pages 同站 JSON
+  try{
+    const r = await fetch(`./${PATH}?v=${Date.now()}`, { cache: "no-store" });
+    if (r.ok){
+      couponsData = await r.json();
+      // 這種讀法拿不到 sha（寫入前再抓）
+      setStatus("已載入", "ok");
+      renderCoupons();
+      return;
+    }
+  }catch{}
+
+  // 2) fallback：用 GitHub Contents API（private 才需要）
   const token = getToken();
   if (!token){
-    // Private repo 下沒 token 幾乎一定 404，所以先提示更清楚
-    setStatus("需要 Token", "bad");
+    setStatus("讀取失敗（需要 Token）", "bad");
     grid.innerHTML = `
       <div class="panel">
-        <div class="danger">尚未提供 GitHub Token</div>
+        <div class="danger">讀取失敗：需要 GitHub Token</div>
         <div class="hint" style="margin-top:8px;">
-          你的 repo 很可能是 Private，讀取 <code class="inline">coupons.json</code> 需要 Token。<br/>
-          請在上方貼上 Token → 儲存 → 再按「重新載入」。
+          若 repo 是 Private，讀取 <code class="inline">coupons.json</code> 需要 Token。<br/>
+          請貼上 Token → 儲存 → 再按「重新載入」。
         </div>
       </div>`;
     return;
@@ -365,8 +378,8 @@ async function loadCoupons(){
       <div class="panel">
         <div class="danger">讀取 coupons.json 失敗：${res.status}</div>
         <div class="hint" style="margin-top:8px;">
-          可能原因：Token 權限不足（需要 Contents: Read and write）、repo/branch/path 打錯、或 Token 沒選到這個 repo。<br/>
-          <span class="small">（除錯訊息：${escapeHtml(txt.slice(0, 240))}）</span>
+          可能原因：Token 權限不足、repo/branch/path 錯誤。<br/>
+          <span class="small">（訊息：${escapeHtml(txt.slice(0, 220))}）</span>
         </div>
       </div>`;
     return;
@@ -375,6 +388,7 @@ async function loadCoupons(){
   const j = await res.json();
   fileSha = j.sha;
 
+  // ✅ 正確 utf-8 解碼 base64
   const b64 = (j.content || "").replace(/\n/g, "");
   const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
   const decoded = new TextDecoder("utf-8").decode(bytes);
@@ -385,18 +399,27 @@ async function loadCoupons(){
 }
 
 function renderCoupons(){
-  const list = couponsData?.coupons || [];
+  // 支援兩種格式：{coupons:[...]} 或直接 [...]
+  const list = Array.isArray(couponsData) ? couponsData : (couponsData?.coupons || []);
+
   if (!Array.isArray(list) || list.length === 0){
     grid.innerHTML = `
       <div class="panel">
-        <div class="danger">coupons.json 內容不正確或是空的</div>
-        <div class="hint" style="margin-top:8px;">請確認格式：{ "coupons": [ ... ] }</div>
+        <div class="danger">券資料格式不正確或是空的</div>
+        <div class="hint" style="margin-top:8px;">建議格式：{ "coupons": [ ... ], "updated_at": "..." }</div>
       </div>`;
     return;
   }
 
+  // 如果 couponsData 是 array，包回物件，方便寫回更新
+  if (Array.isArray(couponsData)){
+    couponsData = { coupons: list, updated_at: new Date().toISOString() };
+  } else if (!couponsData.updated_at){
+    couponsData.updated_at = new Date().toISOString();
+  }
+
   grid.innerHTML = "";
-  list.forEach((c, idx) => {
+  couponsData.coupons.forEach((c, idx) => {
     const card = document.createElement("div");
     card.className = "card";
 
@@ -456,7 +479,7 @@ document.getElementById("okBtn").onclick = async () => {
 
   const token = getToken();
   if (!token){
-    showToast("請先貼上並儲存 GitHub Token");
+    showToast("兌換需要 GitHub Token（Contents: Read and write）");
     return;
   }
 
@@ -473,20 +496,31 @@ document.getElementById("okBtn").onclick = async () => {
 
   try{
     await saveToGitHub(token, c);
-    showToast("兌換成功，已更新並通知");
+    showToast("兌換成功：已更新並通知");
   }catch(e){
     // 失敗回滾
     c.remain = Number(c.remain) + 1;
     renderCoupons();
-    showToast("更新失敗：請檢查 Token 權限/是否選到 repo");
     console.error(e);
+    showToast("更新失敗：請檢查 Token 權限/是否選到 repo");
   }
 };
 
-async function saveToGitHub(token, couponJustUsed){
-  const api = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`;
+async function ensureSha(token){
+  if (fileSha) return;
+  const metaUrl = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}?ref=${BRANCH}`;
+  const metaRes = await githubFetch(metaUrl, { token });
+  if (!metaRes.ok) throw new Error("Failed to fetch sha before PUT");
+  const meta = await metaRes.json();
+  fileSha = meta.sha;
+}
 
+async function saveToGitHub(token, couponJustUsed){
+  await ensureSha(token);
+
+  const api = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`;
   const contentStr = JSON.stringify(couponsData, null, 2);
+
   const body = {
     message: `redeem ${couponJustUsed.id} (remain=${couponJustUsed.remain})`,
     content: btoa(unescape(encodeURIComponent(contentStr))),
@@ -504,14 +538,13 @@ async function saveToGitHub(token, couponJustUsed){
   const out = await res.json();
   fileSha = out.content.sha;
 
-  // 通知你（Discord webhook）
   if (DISCORD_WEBHOOK_URL){
     await notifyDiscord(couponJustUsed);
   }
 }
 
 async function notifyDiscord(c){
-  // 通知失敗不影響兌換結果
+  // 通知失敗不影響兌換
   try{
     await fetch(DISCORD_WEBHOOK_URL, {
       method: "POST",
