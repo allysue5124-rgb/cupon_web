@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>兌換券</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", sans-serif; margin: 24px; }
+    .top { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    input { padding:10px; width: 380px; max-width: 100%; }
+    button { padding:10px 14px; cursor:pointer; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 18px; }
+    .card { border:1px solid #ddd; border-radius: 12px; padding: 14px; position:relative; }
+    .title { font-weight: 800; }
+    .remain { margin-top: 8px; }
+    .hoverBox {
+      display:none; position:absolute; left:12px; right:12px; top:52px;
+      border:1px solid #ccc; border-radius: 10px; padding: 10px; background:#fff;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+      z-index: 10;
+    }
+    .card:hover .hoverBox { display:block; }
+    .small { color:#666; font-size: 12px; }
+    .danger { color: #b00020; font-weight: 800; }
+
+    .modalBg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); align-items:center; justify-content:center; }
+    .modal { background:#fff; padding:16px; border-radius:12px; width: min(460px, 92vw); }
+    .modalBtns { display:flex; gap:10px; justify-content:flex-end; margin-top: 12px; }
+    .toast { position:fixed; right:16px; bottom:16px; padding:12px 14px; background:#111; color:#fff; border-radius:10px; display:none; }
+    .pill { display:inline-block; padding:2px 8px; border:1px solid #ddd; border-radius: 999px; font-size: 12px; color:#444; }
+  </style>
+</head>
+<body>
+  <h2>兌換券</h2>
+
+  <div class="top">
+    <input id="token" type="password" placeholder="貼上 GitHub Token（只需一次，會存在此瀏覽器）" />
+    <button id="saveToken">儲存 Token</button>
+    <button id="load">重新載入</button>
+    <span class="pill" id="status">狀態：尚未載入</span>
+    <div class="small">朋友貼 Token 後，按兌換會自動更新 repo 的 coupons.json 並通知你。</div>
+  </div>
+
+  <div id="grid" class="grid"></div>
+
+  <div id="modalBg" class="modalBg">
+    <div class="modal">
+      <div id="modalText"></div>
+      <div class="modalBtns">
+        <button id="cancelBtn">取消</button>
+        <button id="okBtn">確定兌換</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+<script>
+/** ====== 你要改的設定（必改） ====== */
+const OWNER = "YOUR_GITHUB_NAME";      // 例如 "nttucslab"
+const REPO  = "YOUR_REPO_NAME";        // 例如 "coupon-site"
+const BRANCH = "main";                 // 例如 "main"
+const PATH = "coupons.json";           // 檔案路徑（放根目錄就這樣寫）
+
+/** ====== 通知（可選，但你要通知就填） ====== */
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1469263538064199792/qlJoiqx0tnDDlLESdhAAUG_cbW_8dw2h81zSM_FqA-36q0nT_XCCBbdPVtERjwDc6GOt"; // 例如: https://discord.com/api/webhooks/xxx/yyy
+/** =================================== */
+
+const grid = document.getElementById("grid");
+const tokenInput = document.getElementById("token");
+const modalBg = document.getElementById("modalBg");
+const modalText = document.getElementById("modalText");
+const toast = document.getElementById("toast");
+const statusEl = document.getElementById("status");
+
+let couponsData = null;
+let fileSha = null;
+let pendingCouponIndex = null;
+
+function setStatus(s) { statusEl.textContent = "狀態：" + s; }
+
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.style.display = "block";
+  setTimeout(() => toast.style.display = "none", 2500);
+}
+
+function getToken() {
+  return localStorage.getItem("gh_token") || "";
+}
+
+document.getElementById("saveToken").onclick = () => {
+  const t = tokenInput.value.trim();
+  if (!t) return showToast("請貼上 Token");
+  localStorage.setItem("gh_token", t);
+  tokenInput.value = "";
+  showToast("Token 已儲存（只在這台電腦的瀏覽器）");
+};
+
+document.getElementById("load").onclick = () => loadCoupons();
+
+async function loadCoupons() {
+  setStatus("載入中…");
+  grid.innerHTML = "載入中…";
+  const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}?ref=${BRANCH}`;
+  const res = await fetch(url, { headers: { "Accept": "application/vnd.github+json" } });
+
+  if (!res.ok) {
+    setStatus("讀取失敗");
+    grid.innerHTML = `<div class="danger">讀取 coupons.json 失敗：${res.status}<br/>請檢查 OWNER/REPO/BRANCH/PATH 是否正確。</div>`;
+    return;
+  }
+
+  const j = await res.json();
+  fileSha = j.sha;
+  const decoded = atob((j.content || "").replace(/\n/g, ""));
+  couponsData = JSON.parse(decoded);
+
+  setStatus("已載入");
+  renderCoupons();
+}
+
+function renderCoupons() {
+  const list = couponsData?.coupons || [];
+  grid.innerHTML = "";
+
+  list.forEach((c, idx) => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const disabled = c.remain <= 0;
+    card.innerHTML = `
+      <div class="title">${escapeHtml(c.title)}</div>
+      <div class="remain">剩餘：<b>${c.remain}</b></div>
+      <div class="hoverBox">
+        <div>${escapeHtml(c.desc || "")}</div>
+        <div class="small" style="margin-top:8px;">代號：${escapeHtml(c.id)}</div>
+        <div style="margin-top:10px;">
+          <button ${disabled ? "disabled" : ""} data-idx="${idx}">${disabled ? "已用完" : "兌換"}</button>
+        </div>
+      </div>
+    `;
+
+    const btn = card.querySelector("button");
+    if (btn && !disabled) btn.addEventListener("click", () => openConfirm(idx));
+    grid.appendChild(card);
+  });
+}
+
+function openConfirm(idx) {
+  const c = couponsData.coupons[idx];
+  pendingCouponIndex = idx;
+
+  modalText.innerHTML = `
+    <div><b>${escapeHtml(c.title)}</b></div>
+    <div style="margin-top:8px;">確定要兌換 <b>1 次</b> 嗎？</div>
+    <div class="small" style="margin-top:6px;">目前剩餘：${c.remain}</div>
+  `;
+  modalBg.style.display = "flex";
+}
+
+document.getElementById("cancelBtn").onclick = () => {
+  modalBg.style.display = "none";
+  pendingCouponIndex = null;
+};
+
+document.getElementById("okBtn").onclick = async () => {
+  modalBg.style.display = "none";
+  const idx = pendingCouponIndex;
+  pendingCouponIndex = null;
+  if (idx === null) return;
+
+  const token = getToken();
+  if (!token) {
+    showToast("請先貼上並儲存 GitHub Token");
+    return;
+  }
+
+  const c = couponsData.coupons[idx];
+  if (c.remain <= 0) {
+    showToast("已經沒次數了");
+    return;
+  }
+
+  // 先在畫面上立即扣（體驗好）
+  c.remain -= 1;
+  couponsData.updated_at = new Date().toISOString();
+  renderCoupons();
+
+  try {
+    await saveToGitHub(token, c);
+    showToast("兌換成功，已更新紀錄");
+  } catch (e) {
+    // 失敗就回滾（把次數加回去）
+    c.remain += 1;
+    renderCoupons();
+    showToast("更新失敗：Token/權限/設定可能不正確");
+    console.error(e);
+  }
+};
+
+async function saveToGitHub(token, couponJustUsed) {
+  const api = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`;
+
+  const contentStr = JSON.stringify(couponsData, null, 2);
+  const body = {
+    message: `redeem ${couponJustUsed.id} (remain=${couponJustUsed.remain})`,
+    content: btoa(unescape(encodeURIComponent(contentStr))),
+    sha: fileSha,
+    branch: BRANCH
+  };
+
+  const res = await fetch(api, {
+    method: "PUT",
+    headers: {
+      "Accept": "application/vnd.github+json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`GitHub PUT failed: ${res.status} ${txt}`);
+  }
+
+  const out = await res.json();
+  fileSha = out.content.sha;
+
+  if (DISCORD_WEBHOOK_URL) {
+    await notifyDiscord(couponJustUsed);
+  }
+}
+
+async function notifyDiscord(c) {
+  // 通知失敗不影響兌換
+  try {
+    await fetch(DISCORD_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content: `兌換通知：${c.title}（${c.id}）被兌換 1 次，剩餘 ${c.remain}。`
+      })
+    });
+  } catch {}
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[m]));
+}
+
+// init
+loadCoupons();
+</script>
+</body>
+</html>
